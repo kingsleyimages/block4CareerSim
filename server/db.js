@@ -40,7 +40,13 @@ const createTables = async () => {
   `;
   await client.query(SQL);
 };
-
+/*
+//
+//
+//   users
+//
+//
+*/
 const createUser = async (username, password) => {
   try {
     const SQL = `
@@ -129,18 +135,27 @@ const findUserByToken = async (token) => {
     error.status = 401;
     throw error;
   }
+  console.log('response.rows[0]', response.rows[0]);
   return response.rows[0];
 };
 // custom middleware to find the user by token
 const isLoggedIn = async (req, res, next) => {
   try {
-    console.log('req.headers.authorization', req.headers);
+    // console.log('req.headers.authorization', req.headers);
     req.user = await findUserByToken(req.headers.authorization);
     next();
   } catch (ex) {
     next(ex);
   }
 };
+
+/*
+//
+//
+//   books
+//
+//
+*/
 
 const createBook = async (name, author, genre) => {
   try {
@@ -182,6 +197,14 @@ const fetchBookById = async (id) => {
   }
 };
 
+/*
+//
+//
+//   reviews
+//
+//
+*/
+
 // create a review entry
 const createReview = async (user_id, book_id, review) => {
   try {
@@ -202,6 +225,147 @@ const createReview = async (user_id, book_id, review) => {
   }
 };
 
+const fetchReviewByBookId = async (id) => {
+  try {
+    const SQL = `
+      SELECT user_id, book_id, review
+      FROM reviews
+      WHERE book_id = $1;
+    `;
+    const { rows } = await client.query(SQL, [id]);
+    return rows;
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+const fetchReviewByReviewUserId = async (bookId, reviewId) => {
+  try {
+    const SQL = `
+      SELECT user_id, book_id, id, review
+      FROM reviews
+      WHERE id = $1 AND book_id = $2;
+    `;
+    const { rows } = await client.query(SQL, [reviewId, bookId]);
+    return rows;
+  } catch (error) {
+    console.log(error);
+  }
+};
+const fetchReviewByUserId = async (id) => {
+  try {
+    const SQL = `
+      SELECT user_id, id, review
+      FROM reviews
+      WHERE user_id = $1;
+    `;
+    const { rows } = await client.query(SQL, [id]);
+    return rows;
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+const updateReview = async (userId, id, review) => {
+  try {
+    const SQL = `
+      UPDATE reviews
+      SET review = $3
+      WHERE id = $2 AND user_id = $1
+      RETURNING *;
+    `;
+    const { rows } = await client.query(SQL, [userId, id, review]);
+    return rows;
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+const deleteReview = async (userId, id) => {
+  try {
+    const SQL = `
+      DELETE FROM reviews
+      WHERE id = $2 AND user_id = $1
+      RETURNING *;
+    `;
+    const { rows } = await client.query(SQL, [userId, id]);
+    return rows;
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+/*
+//
+//
+//   comments
+//
+//
+*/
+
+const createComment = async (user_id, review_id, comment) => {
+  try {
+    const SQL = `
+      INSERT INTO comments (id, user_id, review_id, comment)
+      VALUES ($1, $2, $3, $4)
+      RETURNING *;
+    `;
+    const { rows } = await client.query(SQL, [
+      uuid.v4(),
+      user_id,
+      review_id,
+      comment,
+    ]);
+    return rows;
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+const fetchCommentByUserId = async (id) => {
+  try {
+    const SQL = `
+      SELECT user_id, review_id, comment
+      FROM comments
+      WHERE user_id = $1;
+    `;
+    const { rows } = await client.query(SQL, [id]);
+    return rows;
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+// update comment
+
+const updateComment = async (userId, id, comment) => {
+  try {
+    const SQL = `
+      UPDATE comments
+      SET comment = $1
+      WHERE id = $2 and user_id = $3
+      RETURNING *;
+    `;
+    const { rows } = await client.query(SQL, [comment, id, userId]);
+    return rows;
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+const deleteComment = async (userId, id) => {
+  try {
+    const SQL = `
+      DELETE FROM comments
+      WHERE id = $1 AND user_id = $2
+      RETURNING *;
+    `;
+    const { rows } = await client.query(SQL, [id, userId]);
+    return rows;
+  } catch (error) {
+    console.log(error);
+  }
+};
 module.exports = {
   client,
   createTables,
@@ -216,4 +380,13 @@ module.exports = {
   fetchBookById,
   createBook,
   createReview,
+  createComment,
+  fetchCommentByUserId,
+  fetchReviewByBookId,
+  fetchReviewByReviewUserId,
+  fetchReviewByUserId,
+  updateReview,
+  updateComment,
+  deleteComment,
+  deleteReview,
 };
